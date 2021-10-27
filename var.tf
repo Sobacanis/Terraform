@@ -10,7 +10,15 @@ variable "project" {
     public_subnets_per_vpc  = 1,
     private_subnets_per_vpc = 2,
     instance_type           = "t2.micro"
-    admin_ip = "176.106.217.78/32"
+    admin_ip                = "176.106.217.78/32"
+    dbadmin                 = "admin"
+    dbengine                = "mysql"
+    dbengine_version        = "8.0.23"
+    dbmajor_engine_version  = "8.0"
+    dbparametergroup_family = "mysql8.0"
+    dbinstance_class        = "db.t2.micro"
+    dballocated_storage     = 5
+    dbport                  = "3306"
   }
 }
 
@@ -34,50 +42,11 @@ variable "private_cidr_blocks" {
   ]
 }
 
-variable "db_sg_ingress_rules" {
-  type = list(object({
-    from_port   = number
-    to_port     = number
-    protocol    = string
-    description = string
-  }))
+variable "s3_bucket_names" {
+  type = list(string)
   default = [
-    {
-      from_port   = 22
-      to_port     = 22
-      protocol    = "tcp"
-      description = "SSH access"
-    },
-    {
-      from_port   = 3308
-      to_port     = 3308
-      protocol    = "tcp"
-      description = "SSH access"
-    }
-
-  ]
-}
-
-variable "app_sg_ingress_rules" {
-  type = list(object({
-    from_port   = number
-    to_port     = number
-    protocol    = string
-    description = string
-  }))
-  default = [
-    {
-      from_port   = 22
-      to_port     = 22
-      protocol    = "tcp"
-      description = "SSH access"
-    },
-    {
-      from_port   = 80
-      to_port     = 80
-      protocol    = "tcp"
-      description = "SSH access"
-    }
-
+    "bucket-000001",
+    "bucket-000002",
+    "bucket-000003"
   ]
 }
