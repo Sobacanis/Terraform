@@ -8,12 +8,13 @@ data "aws_availability_zones" "az-available" {
 resource "aws_vpc" "vpc" {
   cidr_block = var.vpc_cidr
   tags = {
-    Name = "${var.project_name}-vpc"
+    Name    = "${var.project_name}-vpc"
+    Project = var.project_name
   }
 }
 
 resource "aws_subnet" "vpc_subnets" {
-  for_each                        = { for subnets in var.subnets_config : subnets.cidr_block => subnets }
+  for_each                        = { for subnets in local.subnets_config : subnets.cidr_block => subnets }
   vpc_id                          = aws_vpc.vpc.id
   cidr_block                      = each.value.cidr_block
   customer_owned_ipv4_pool        = each.value.customer_owned_ipv4_pool
@@ -36,21 +37,7 @@ resource "aws_internet_gateway" "igw" {
 
 resource "aws_route_table" "inet_rt" {
   vpc_id = aws_vpc.vpc.id
-  route = [{
-    cidr_block                 = var.inet_cidr
-    gateway_id                 = aws_internet_gateway.igw.id
-    carrier_gateway_id         = null
-    destination_prefix_list_id = null
-    egress_only_gateway_id     = null
-    instance_id                = null
-    ipv6_cidr_block            = null
-    local_gateway_id           = null
-    nat_gateway_id             = null
-    network_interface_id       = null
-    transit_gateway_id         = null
-    vpc_endpoint_id            = null
-    vpc_peering_connection_id  = null
-  }]
+  route  = [local.inet_route]
   tags = {
     "Name" = "${var.project_name}-inet_rt"
   }
@@ -61,38 +48,19 @@ resource "aws_route_table_association" "inet_rt_association" {
   route_table_id = aws_route_table.inet_rt.id
 }
 
-#### Security section
+#### Security section 
 
-resource "aws_security_group" "public_sg" {
-  #name        = "${var.project_name}-${each.value.name}"
-  name        = "${var.project_name}-public_sg"
-  description = "Security group for public instances"
+
+resource "aws_security_group" "security_groups" {
+  for_each    = { for security_groups in var.security_groups : security_groups.name => security_groups }
+  name        = each.value.name
+  description = each.value.description
   vpc_id      = aws_vpc.vpc.id
-  /*for_each    = { for ingress_rules in var.ingress_rules : ingress_rules.name => ingress_rules }
-  ingress = [
-    {
-      description      = each.value.name
-      from_port        = each.value.from_port
-      to_port          = each.value.to_port
-      protocol         = each.value.protocol
-      cidr_blocks      = each.value.cidr_blocks
-      security_groups  = each.value.security_groups
-      ipv6_cidr_blocks = each.value.ipv6_cidr_blocks
-      prefix_list_ids  = [each.value.prefix_list_ids]
-      self             = each.value.self
-    }
-  ] */
-}
-
-resource "aws_security_group" "private_sg" {
-  name = "${var.project_name}-private_sg"
-  description = "Security group for private instances"
-  vpc_id = aws_vpc.vpc.id
 }
 
 resource "aws_security_group_rule" "security_group_rules" {
   for_each                 = { for security_group_rules in var.security_group_rules : security_group_rules.name => security_group_rules }
-  security_group_id        = (each.value.security_group_type != "public" ? aws_security_group.private_sg.id : aws_security_group.public_sg.id)
+  security_group_id        = each.value.security_group_type == "public" ? aws_security_group.security_groups["public_sg"].id : aws_security_group.security_groups["private_sg"].id
   from_port                = each.value.from_port
   to_port                  = each.value.to_port
   protocol                 = each.value.protocol
@@ -102,18 +70,22 @@ resource "aws_security_group_rule" "security_group_rules" {
   ipv6_cidr_blocks         = each.value.ipv6_cidr_blocks
   prefix_list_ids          = each.value.prefix_list_ids
   self                     = each.value.self
-  source_security_group_id = (each.value.security_group_type != "public" ? aws_security_group.public_sg.id : null)
+  source_security_group_id = each.value.security_group_type != "public" ? aws_security_group.security_groups["private_sg"].id : null
 }
 
-output "vpc_subnets" {
-  value = { for subnet in aws_subnet.vpc_subnets : subnet.cidr_block => subnet.id }
-}
-output "name" {
-  value = aws_subnet.vpc_subnets["192.168.0.0/24"].id
+#### Database section
 
-}
-
-output "seca" {
-  #value = {for name in var.ingress_rules : name.name => name }
-  value = { for ingress_rules in var.ingress_rules : ingress_rules.name => ingress_rules }
+resource "aws_db_parameter_group" "db_parameter_groups" {
+  for_each    = { for parameter_grpoup in var.db_parmater_groups : parameter_grpoup.name => parameter_grpoup }
+  name        = each.value.name
+  family      = each.value.family
+  description = each.value.description
+  dynamic "parameter" {
+    for_each = each.value.parameters
+    content {
+      name  = parameter.value.name
+      value = parameter.value.value
+      apply_method = parameter.value.apply_method
+    }
+  }
 }

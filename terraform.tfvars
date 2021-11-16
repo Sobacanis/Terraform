@@ -24,46 +24,14 @@ subnets_config = [{
   }
 ]
 
-ingress_rules = [
+security_groups = [
   {
-    name                = "http"
-    security_group_type = "public"
-    description         = "Access to http from everywhere"
-    cidr_blocks         = ["0.0.0.0/0"]
-    from_port           = 80
-    to_port             = 80
-    protocol            = "tcp"
-    prefix_list_ids     = ""
+    name        = "public_sg"
+    description = "Security group for public instances"
   },
   {
-    name                = "https"
-    security_group_type = "public"
-    description         = "Access to https from everywhere"
-    cidr_blocks         = ["0.0.0.0/0"]
-    from_port           = 443
-    to_port             = 443
-    protocol            = "tcp"
-    prefix_list_ids     = ""
-  },
-  {
-    name                = "client_ssh"
-    security_group_type = "public"
-    description         = "Access to ssh from client's IP ranges"
-    cidr_blocks         = ["176.106.217.78/32"]
-    from_port           = 22
-    to_port             = 22
-    protocol            = "tcp"
-    prefix_list_ids     = ""
-  },
-  {
-    name                = "mysql"
-    security_group_type = "private"
-    description         = "Access to MySql from public subnet"
-    from_port           = 3306
-    to_port             = 3306
-    protocol            = "tcp"
-    security_groups     = [""]
-    prefix_list_ids     = ""
+    name        = "private_sg"
+    description = "Security group for private instances"
   }
 ]
 
@@ -111,7 +79,7 @@ security_group_rules = [
     name                = "all_public"
     security_group_type = "public"
     type                = "egress"
-    description         = "Access to http from everywhere"
+    description         = "Egress to everywhere"
     cidr_blocks         = ["0.0.0.0/0"]
     from_port           = 0
     to_port             = 65535
@@ -119,12 +87,75 @@ security_group_rules = [
   },
   {
     name                = "all_private"
-    security_group_type = "public"
-    type                = "ingress"
-    description         = "Access to http from everywhere"
-    cidr_blocks         = ["0.0.0.0/0"]
+    security_group_type = "private"
+    type                = "egress"
+    description         = "Egress to everywhere"
     from_port           = 0
     to_port             = 65535
     protocol            = "all"
   },
+]
+
+db_parmater_groups = [{
+  family      = "mysql8.0"
+  name        = "mysql-8-01"
+  description = "Eight-zero-one"
+  parameters = [{
+    name  = "autocommit"
+    value = "1"
+    },
+    {
+      name  = "binlog_checksum"
+      value = "NONE"
+    },
+    {
+      name  = "innodb_adaptive_flushing"
+      value = "0"
+    },
+    {
+      name         = "skip_show_database"
+      value        = "0"
+      apply_method = "pending-reboot"
+  }]
+  },
+  {
+    family      = "mysql8.0"
+    name        = "mysql-8-02"
+    description = "Eight-zero-two"
+    parameters = [{
+      name  = "autocommit"
+      value = "1"
+    }]
+  },
+  {
+    family      = "mysql5.7"
+    name        = "mysql-57-01"
+    description = "fiveseven-one"
+    parameters = [{
+      name  = "autocommit"
+      value = "0"
+      },
+      {
+        name         = "query_cache_type"
+        value        = "2"
+        apply_method = "pending-reboot"
+      },
+      {
+        name  = "old_passwords"
+        value = "0"
+      },
+      {
+        name  = "innodb_stats_on_metadata"
+        value = "0"
+    }]
+  },
+  {
+    family      = "mysql5.6"
+    name        = "mysql-56-01"
+    description = "five-six-one"
+    parameters = [{
+      name  = "innodb_compression_level"
+      value = "7"
+    }]
+  }
 ]
